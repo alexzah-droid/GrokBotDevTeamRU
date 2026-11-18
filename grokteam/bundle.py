@@ -52,6 +52,7 @@ def bootstrap(role, workspace, team_id, root=ROOT):
     command = [sys.executable, "-B", str(Path(root).resolve() / "teamctl.py"), "--workspace", str(Path(workspace).resolve()),
                "--actor", role, "role", "read", role]
     rule = texts(root)["bootstrap"]
-    body = " ".join(rule[key] for key in ("scope", "read", "stop", "notify", "stale"))
+    notify = rule["notify_user"] if role == "lead" else rule["notify"]
+    body = " ".join((rule["scope"], rule["read"], rule["stop"], notify, rule["stale"]))
     return (rule["header"].format(team_id=team_id, role=role) + "\n" + body + "\nargv="
             + json.dumps(command, ensure_ascii=False, separators=(",", ":")))

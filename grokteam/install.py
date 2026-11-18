@@ -11,20 +11,47 @@ from .store import digest, require, uid
 
 
 class Installation:
-    def install(self, lead_id, mode="approval", adapter="native", source=None):
+    def install_options(self, lead_id, choice=None):
+        self.need_actor("installer", "lead")
+        require(isinstance(lead_id, str) and lead_id.strip(), "Existing lead agent ID required")
+        require(choice in (None, "approval", "autonomous"), "Invalid install choice")
+        cards = bundle.texts(self.root)["install_cards"]
+        with self.store.transaction():
+            team = self.store.get("config", "team")
+            if team:
+                require(team["lead_id"] == lead_id, "This workspace belongs to another lead")
+                return {"mode": team.get("install_mode", self.policy()["system_mode"]), "resume": True}
+            state = self.store.get("config", "install_choice")
+            require(not state or state["lead_id"] == lead_id, "This workspace belongs to another lead")
+            if state and state["mode"] == "approval":
+                require(choice != "autonomous", "Installation already chose approval")
+            if not state or choice is not None:
+                state = {"lead_id": lead_id, "mode": choice}
+                self.store.put("config", "install_choice", state)
+                if choice is None:
+                    return {"mode": None, "mode_card": cards["mode"], "folder_card": cards["folder"]}
+            return {"mode": state["mode"] or "approval", "resume": True, "folder_card": cards["folder"]}
+
+    def install(self, lead_id, mode="approval", adapter="native", source=None, section_id=None):
         self.need_actor("installer", "user")
         require(mode in ("approval", "autonomous"), "Invalid mode")
         require(adapter in ("native", "mock"), "Adapter must be native or mock")
         require(isinstance(lead_id, str) and lead_id.strip(), "Existing lead agent ID required")
+        require(section_id is None or isinstance(section_id, str) and section_id.strip(), "Invalid sidebar section ID")
         release = bundle.verify(self.root)
         if source is None:
             source = release["repository"]
         role_names = bundle.texts(self.root)["roles"]
         with self.store.transaction():
             old = self.store.get("config", "team")
+            draft = self.store.get("config", "install_choice")
+            require(not draft or draft["lead_id"] == lead_id, "This workspace belongs to another lead")
             consent = None
             if self.actor == "user" or (old is None and mode == "autonomous"):
-                consent = self.require_confirmation("install", lead_id, {"mode": mode, "adapter": adapter, "source": source})
+                payload = {"mode": mode, "adapter": adapter, "source": source}
+                if section_id is not None:
+                    payload["section_id"] = section_id
+                consent = self.require_confirmation("install", lead_id, payload)
             if old:
                 require(old["lead_id"] == lead_id and old["adapter"] == adapter and old["release"] == release,
                         "This workspace belongs to a different installation/release; use a separate workspace")
@@ -32,6 +59,7 @@ class Installation:
             team_id = uid("team")
             team = {"id": team_id, "status": "installing", "lead_id": lead_id,
                     "adapter": adapter, "source": source, "release": release,
+                    "install_mode": mode, "section_id": section_id,
                     "challenge": uid("probe"), "created": self.clock()}
             self.store.put("config", "team", team)
             self.store.put("config", "policy", {"revision": 1, "system_mode": mode, "bot_modes": {},
@@ -43,8 +71,10 @@ class Installation:
                          "bound": False, "skills_hash": bundle.skills_hash(role, self.root)}
                 self.store.put("role", role, value)
                 if role != "lead":
-                    self._operation("create", role, {"name": role_names[role] + " · " + team_id[-6:],
-                                    "team_id": team_id}, key="install-create-" + role)
+                    data = {"name": role_names[role] + " · " + team_id[-6:], "team_id": team_id}
+                    if section_id is not None:
+                        data["section_id"] = section_id
+                    self._operation("create", role, data, key="install-create-" + role)
                 else:
                     self._bind_operation(role, team)
             self.emit("install.started", team_id, {**team, "mode": mode, "confirmation": consent})
@@ -84,6 +114,11 @@ class Installation:
                 require(agent_id not in [r["agent_id"] for r in self.store.all("role")], "Agent already assigned")
                 row = self.store.need("role", role)
                 row["agent_id"] = agent_id
+                if "section_id" in receipt:
+                    section_id = receipt["section_id"]
+                    require(section_id is None or isinstance(section_id, str) and section_id.strip(),
+                            "Invalid receipt section ID")
+                    row["section_id"] = section_id
                 self.store.put("role", role, row)
                 self._bind_operation(role, team)
             elif op["kind"] == "bind":
@@ -168,11 +203,13 @@ class Installation:
             team["status"] = "ready"
             self.store.put("config", "team", team)
             self.emit("install.ready", team["id"], {"adapter": team["adapter"]})
-        return team
+            placement = {row["role"]: row.get("section_id", "unknown")
+                         for row in self.store.all("role") if row["role"] != "lead"}
+            return {**team, "placements": placement}
 
-    def mock_install(self, lead_id="mock-primary", mode="approval"):
+    def mock_install(self, lead_id="mock-primary", mode="approval", section_id=None):
         self.need_actor("installer")
-        self.install(lead_id, mode=mode, adapter="mock")
+        self.install(lead_id, mode=mode, adapter="mock", section_id=section_id)
         while True:
             pending = [p for p in self.pending() if p["id"].startswith("install-")]
             if not pending:
@@ -184,6 +221,7 @@ class Installation:
             receipt = {"external_ref": "mock:" + op["id"]}
             if op["kind"] == "create":
                 receipt["agent_id"] = "mock-" + op["target"]
+                receipt["section_id"] = op["data"].get("section_id")
             elif op["kind"] == "bind":
                 old_actor = self.actor
                 self.actor = op["target"]

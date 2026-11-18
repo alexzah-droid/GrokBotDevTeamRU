@@ -36,12 +36,22 @@ def relay_handoff(engine):
                                     "external_ref": "demo-delivery:" + op["id"]})
 
 
+def commit_snapshot(project, message):
+    subprocess.run(["git", "add", "."], cwd=project, check=True)
+    subprocess.run(["git", "-c", "user.name=Demo", "-c", "user.email=demo@example.invalid",
+                    "-c", "commit.gpgsign=false", "commit", "-qm", message], cwd=project, check=True)
+    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=project, text=True).strip()
+
+
 def demo():
     with tempfile.TemporaryDirectory(prefix="grok-team-demo-") as directory:
         base = Path(directory)
         e = Engine(base / "runtime", actor="installer")
         try:
-            e.mock_install()
+            e.install_options("mock-primary")
+            e.install_options("mock-primary", "approval")
+            installed = e.mock_install(section_id="demo-folder")
+            assert installed["placements"] == {"developer": "demo-folder", "reviewer": "demo-folder"}
             e.mock_install()  # idempotent resume, still exactly two created agents
             project = base / "project"
             project.mkdir()
@@ -52,7 +62,11 @@ def demo():
             subprocess.run(["git", "add", "."], cwd=str(project), check=True)
             e.actor = "lead"
             assert e.status()["team"]["status"] == "ready"
-            e.project_bind(str(project), [sys.executable, "-B", "verify.py"], "demo:user-project")
+            binding = {"repository": str(project), "command": [sys.executable, "-B", "verify.py"],
+                       "evidence": "demo:user-project"}
+            chat_grant(e, "project.bind", "project", "demo:bind-approved", binding)
+            e.project_bind(**binding)
+            e.actor = "lead"
             task = e.task_create({"request_id": "demo:task", "user_ref": "demo:user-task",
                                   "goal": "Correct signed addition", "criteria": [
                                       {"id": "positive", "text": "2+3=5"},
@@ -62,8 +76,9 @@ def demo():
             docs = {k: {"not_needed": "Local arithmetic fixture has no documentation change"}
                     for k in ("architecture", "user", "agent")}
             e.actor = "developer"
+            commit = commit_snapshot(project, "Implement addition")
             e.project_verify(task)
-            e.task_action(task, "submit", {"event_id": "submit-1", "summary": "initial addition", "docs": docs})
+            e.task_action(task, "submit", {"event_id": "submit-1", "summary": "initial addition", "docs": docs, "commit": commit})
             relay_handoff(e)
             e.actor = "reviewer"
             e.reviewer_check_add([sys.executable, "-B", "-c", "from calc import add; assert add(-2,-3)==-5"])
@@ -74,8 +89,11 @@ def demo():
             relay_handoff(e)
             (project / "calc.py").write_text("def add(a,b): return a+b\n")
             (project / "verify.py").write_text("from calc import add\nassert add(2,3)==5\nassert add(-2,-3)==-5\n")
-            e.actor = "developer"; e.project_verify(task)
-            e.task_action(task, "submit", {"event_id": "submit-2", "summary": "signed arithmetic fixed", "docs": docs})
+            e.actor = "developer"
+            commit = commit_snapshot(project, "Fix signed addition")
+            e.project_verify(task)
+            e.task_action(task, "submit", {"event_id": "submit-2", "summary": "signed arithmetic fixed", "docs": docs,
+                                           "commit": commit})
             relay_handoff(e)
             e.actor = "reviewer"; check = e.project_verify(task)
             assert check["passed"]

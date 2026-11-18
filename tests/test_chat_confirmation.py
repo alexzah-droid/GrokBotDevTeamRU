@@ -133,9 +133,10 @@ class ChatConfirmationTests(RuntimeCase):
 
     def test_question_requires_exact_description_and_hash(self):
         plan = self.plan()
-        for asked in (plan["question"].replace(plan["hash"], ""),
-                      plan["question"].replace(plan["hash"], "0" * 64),
-                      "Another request\n" + CARD["hash"].format(hash=plan["hash"])):
+        short = plan["hash"][:8]
+        for asked in (plan["question"].replace(short, ""),
+                      plan["question"].replace(short, "0" * 8),
+                      "Another request\n" + CARD["hash"].format(hash=short)):
             with self.subTest(asked=asked):
                 with self.assertRaisesRegex(TeamError, "Asked text"):
                     self.chat(plan, asked=asked)

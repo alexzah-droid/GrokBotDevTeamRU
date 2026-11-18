@@ -25,23 +25,29 @@ class Tasks:
                 self.emit("reviewer.check_added", project["id"], {"command": command, "profile_hash": digest(checks)})
         return {"commands": checks, "profile_hash": digest(checks)}
 
-    def project_bind(self, repository, command, evidence, timeout=60):
-        self.need_actor("user", "lead")
-        self.team(ready=True)
+    def project_binding_payload(self, repository, command, evidence, timeout=60):
         require(evidence, "Project authorization/message reference required")
         root = Path(repository).expanduser().resolve()
         require(root != self.store.root and not self.store.root.is_relative_to(root),
                 "Runtime workspace must be outside the project repository")
-        fingerprint = snapshot(root)
         require(isinstance(command, list) and command and all(isinstance(x, str) for x in command), "JSON argv required")
         require(0 < timeout <= 300, "Invalid timeout")
+        return {"repository": str(root), "command": command, "timeout": timeout, "evidence": evidence}
+
+    def project_bind(self, repository, command, evidence, timeout=60):
+        self.need_actor("user", "lead")
+        self.team(ready=True)
+        payload = self.project_binding_payload(repository, command, evidence, timeout)
+        root = payload["repository"]
         with self.store.transaction():
+            previous = self.store.get("config", "project", {})
+            if all(previous.get(key) == payload[key] for key in ("repository", "command", "timeout")):
+                return previous
             self.require_idle("lead")
-            if self.actor == "user":
-                self.require_confirmation("project.bind", "project", {"repository": str(root), "command": command,
-                                          "timeout": timeout, "evidence": evidence})
-            project = {"repository": str(root), "command": command, "timeout": timeout,
-                       "id": digest([str(root), command]), "status": "unverified", "evidence": evidence}
+            if self.actor == "user" or self.policy()["system_mode"] == "approval":
+                self.require_confirmation("project.bind", "project", payload)
+            fingerprint = snapshot(root)
+            project = {**payload, "id": digest([root, command]), "status": "unverified"}
             self.store.put("config", "project", project)
             self.emit("project.bound", project["id"], {**project, "snapshot": fingerprint})
         return project
@@ -150,6 +156,12 @@ class Tasks:
                 require(task["rounds"] < task["max_rounds"], "Task iteration budget exhausted")
                 current = snapshot(project["repository"])
                 own_run = self._last_run(task, "developer", current)
+                if "commit" in data:
+                    root = project["repository"]
+                    head = run(["git", "rev-parse", "--verify", "HEAD"], root)
+                    require(head["returncode"] == 0 and data["commit"] == head["stdout"].strip()
+                            and run(["git", "diff", "--quiet", "HEAD", "--"], root)["returncode"] == 0,
+                            "Submission commit must match the checked snapshot")
                 docs = data.get("docs", {})
                 for kind in ("architecture", "user", "agent"):
                     entry = docs.get(kind, {})

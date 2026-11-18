@@ -283,7 +283,7 @@ class ReleaseFixTests(unittest.TestCase):
                 self.assertEqual(instructions.splitlines()[0], header)
                 for part in ("GrokBotDevTeam", "team-id", role):
                     self.assertIn(part, header)
-                for key in ("scope", "read", "stop", "notify", "stale"):
+                for key in ("scope", "read", "stop", "notify_user" if role == "lead" else "notify", "stale"):
                     self.assertTrue(rule[key].strip(), key)
                     self.assertIn(rule[key], instructions)
                 self.assertIn("role read", rule["stop"])

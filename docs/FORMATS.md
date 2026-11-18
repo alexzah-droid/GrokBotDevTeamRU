@@ -23,9 +23,11 @@ role probe developer
 
 `install --mock` разрешён только для локального теста. `role probe` вызывается от соответствующей роли. Форматы нативных receipts: [INSTALL.md](../INSTALL.md).
 
+Если `SendToAgent` или `UpdateMemory` не вернули ID, укажите `agent-message:<id>:<step>:<time>` или `native-memory:profile:<id>:<step>:<time>` в `external_ref`. Используйте фактический ID бота, шаг и время вызова. Описательная ссылка фиксирует вызов и сама не подтверждает доставку или сохранение. Нужна отдельная проба или нативное подтверждение. В подтверждении создания укажите фактический `section_id` или `null` без папки.
+
 ## Проект
 
-Руководитель по запросу пользователя выполняет `project bind --file project.json`:
+В `approval` Руководитель запрашивает грант `project.bind` на точные параметры. Затем выполняет `project bind --file project.json`:
 
 ```json
 {

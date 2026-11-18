@@ -1,41 +1,43 @@
 # Установка команды одной инструкцией
 
-Установи команду как личный бот пользователя. Создай ровно Разработчика и Проверяющего. Сохрани свои прежние обязанности и чужие команды. Установка разрешает эти операции. Используй доступные инструменты в рамках разрешений.
+Оставайся личным ботом пользователя. Сохрани память и прежние обязанности. Создай только Разработчика и Проверяющего.
 
 ## 1. Подготовь среду
 
-Возьми предварительный выпуск `v1.5.1` из https://github.com/alexzah-droid/GrokBotDevTeamRU. Если тега нет, сообщи блокер и остановись. `<release>`, `<venv>`, `<runtime>` — отдельные постоянные абсолютные пути. Для venv выбери доступный Python 3.10+ (`<python>`). Подставляй аргументы как argv с точными путями.
+Возьми `v1.5.2` из https://github.com/alexzah-droid/GrokBotDevTeamRU. Выбери отдельные постоянные абсолютные пути `<release>`, `<venv>`, `<runtime>` и Python 3.10+ (`<python>`).
 
 ```text
-git clone --depth 1 --branch v1.5.1 https://github.com/alexzah-droid/GrokBotDevTeamRU.git <release>
+git clone --depth 1 --branch v1.5.2 https://github.com/alexzah-droid/GrokBotDevTeamRU.git <release>
 <python> -m venv <venv>
 <venv>/bin/python -B <release>/scripts/doctor.py
 <venv>/bin/python -B <release>/scripts/release.py check
 <venv>/bin/python -B -m pip install --no-deps --no-index <release>
 ```
 
-Найди в каталоге инструменты создания ботов, адресной передачи, постоянной памяти и проверки результата. При отсутствии любого из них укажи конкретный блокер. Префикс всех команд контроллера:
+Найди инструменты создания, передачи, памяти и проверки. Сообщи о недоступном шаге. Передавай точные argv. Префикс:
 
 ```text
 <venv>/bin/python -B <release>/teamctl.py --workspace <runtime>
 ```
 
-## 2. Начни установку
+## 2. Выбери режим и папку
 
-Запусти `--actor installer install --lead-id <lead-id>` с твоим фактическим ID. Повторно используй ту же рабочую папку. По умолчанию действуют `approval` и `chat`. Только при отдельном выборе пользователя подготовь `confirm describe --action install --target <lead-id> --file params.json` с `{"mode":"autonomous","adapter":"native","source":"https://github.com/alexzah-droid/GrokBotDevTeamRU"}`. В чате установщик регистрирует явный ответ человека, в терминальном канале грант выдаёт человек. Примени грант к `install --mode autonomous` по [процедуре подтверждения](docs/CONFIRMATIONS.md).
+Первый вопрос человеку, до создания ботов: `--actor installer install-options --lead-id <lead-id>` выдаёт `mode_card`. Покажи её дословно. Запиши выбор через `--choice approval|autonomous`. Отказ, закрытие или отсутствие ответа означают `approval`. При возобновлении читай сохранённый выбор без нового вопроса.
+
+Узнай свою папку нативным инструментом. Если папка неизвестна, вызови `ListSections` и покажи `folder_card` с пятью папками максимум и вариантом без папки. Известную свою папку поставь первой с меткой из карточки. Бери фактический ID. Нет списка — без папки.
+
+Перед `--actor installer install --lead-id <lead-id>` добавь `--section-id <id>`, если выбрана папка. При `autonomous` сначала покажи вторую карточку из `confirm describe --action install --target <lead-id> --file params.json`. Только явное «Да» даёт грант через `confirm chat` для `install --mode autonomous`. При отказе, закрытии или молчании сохрани `approval` и установи без гранта. При возобновлении используй прежний ответ, иначе оставь `approval`. [Подтверждения и параметры](docs/CONFIRMATIONS.md).
 
 ## 3. Выполни очередь
 
-Работай от `--actor installer` без `--mock` при нативной установке. Читай `bridge pending`. Для `pending` выполни `bridge begin <op>`, затем вызови нативный инструмент и запиши `bridge ack <op> --file receipt.json`. Для `dispatched` найди фактический результат в истории, при неоднозначности остановись. После каждого подтверждения снова читай очередь.
+От `--actor installer` без `--mock` читай `bridge pending`. Для `pending`: `bridge begin <op>`, нативный вызов, `bridge ack <op> --file receipt.json`. Для `dispatched` сверяй историю, без подтверждения не дублируй.
 
-- **`create`.** Создай бота с `data.name`. Совпадение имён чужих ботов не подтверждает принадлежность к команде. В подтверждение запиши фактические `agent_id` и `external_ref` вызова или результата.
-- **`bind`.** Сохрани `data.bootstrap` в постоянной памяти своей роли или отправь его назначенному боту для сохранения. Не стирай прежнюю память. В контексте этой роли выполни argv из стартового правила, прочти prompt и навыки по указанным путям, затем выполни `--actor <role> role probe <role>`. Проверь сохранение платформенным инструментом и, если возможно, повторным обращением. В подтверждение добавь к JSON пробы фактический `external_ref` и `"persistent":true` только после проверки.
-- **`smoke`.** Отправь сначала Разработчику, затем Проверяющему `--actor <role> role smoke <role>` для исполнения в их контексте. В подтверждение добавь `external_ref` нативного сообщения.
+- **`create`.** Передай `CreateAgent` имя `data.name` и сохранённый `section_id`, если поле поддержано. При явном отказе без создания повтори без папки. Запиши фактические `agent_id`, `external_ref`, `section_id` (или `null` без папки). Совпадение имени ничего не подтверждает.
+- **`bind`.** Сохрани `data.bootstrap` в памяти нужного бота. Он читает правило и навыки, запускает `--actor <role> role probe <role>`. Проверь сохранение нативно и по возможности повторным запросом. Добавь `"persistent":true` и `external_ref` к проверенной пробе.
+- **`smoke`.** Разработчик, затем Проверяющий выполняют `--actor <role> role smoke <role>`. Добавь `external_ref` передачи. Если у `SendToAgent` или `UpdateMemory` нет ID, запиши описательную ссылку `agent-message:<id>:<step>:<time>` или `native-memory:profile:<id>:<step>:<time>` по [формату](docs/FORMATS.md). Она фиксирует наблюдение, а не доставку.
 
 ## 4. Подтверди результат
 
-Выполни `--actor installer service start`. По `status` дождись `watchdog_alive=true`. Для восстановления после перезапуска используй [шаблон routine](routines/watchdog-restart.md) только по выбору пользователя и проверь триггер.
+Запусти `--actor installer service start`, проверь `watchdog_alive=true` в `status`. Вызови `--actor installer install-finish`. При `ready` назови роли, режим, исключения и фактическую папку каждого нового бота или отсутствие папки. Сообщи, если размещение неизвестно. Предложи первую задачу и одной строкой предложи включить [шаблон routine](routines/watchdog-restart.md): запуск `service start` при старте компьютера, по согласованию. Иначе назови блокер. При повторном входе сверяй `status` и очередь.
 
-Выполни `--actor installer install-finish`. При `ready` сообщи имена трёх ролей, общий режим и исключения. Предложи первую задачу. При другом состоянии назови подтверждённые шаги и блокер. При повторном входе прочти `status` и продолжи ту же очередь.
-
-[Эксплуатация, восстановление и отключение](docs/OPERATIONS.md) · [Модель доверия](SECURITY.md).
+[Эксплуатация](docs/OPERATIONS.md) · [Модель доверия](SECURITY.md).

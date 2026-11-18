@@ -2,9 +2,10 @@
 import difflib
 import re
 import secrets
+import shlex
 
 from . import bundle
-from .store import digest, encode, require
+from .store import digest, require
 
 
 class Confirmations:
@@ -55,6 +56,8 @@ class Confirmations:
             state = {"revision": task["revision"], "request_hash": task["request_hash"],
                      "review": task.get("review"), "demo": task.get("demo")}
         elif action == "project.bind":
+            require(target == "project", "Invalid project confirmation target")
+            payload = self.project_binding_payload(**payload)
             state = self.store.get("config", "project", {})
         elif action in ("service.start", "service.stop", "install"):
             state = {"team_id": self.store.get("config", "team", {}).get("id")}
@@ -73,9 +76,19 @@ class Confirmations:
         subject = target
         if action.startswith("improve."):
             subject = f'{target} ({exp["role"]})'
+        elif action in ("task.accept", "task.block", "task.cancel"):
+            goal = task["request"]["goal"].strip().splitlines()[0][:120]
+            subject = f"{goal} ({target})"
         wording = bundle.texts(self.root)
         card = wording["card"]
         details = []
+        question = card["question"].format(action=wording["questions"][action], subject=subject)
+        buttons = wording["buttons"]
+        if action == "install" and payload.get("mode") == "autonomous":
+            upgrade = wording["install_cards"]["autonomous"]
+            question = upgrade["question"]
+            details.extend(upgrade["warnings"])
+            buttons = upgrade["buttons"]
         if action == "improve.approve":
             report = exp.get("report", {})
             if report.get("scores"):
@@ -94,17 +107,24 @@ class Confirmations:
             details.append(card["diff"].format(target=target))
         if action == "improve.accept":
             details.append(card["observations"].format(successes=state["successes"], version=exp["candidate"]))
-        if payload:
-            summary = encode(payload)
-            if len(summary) > 400:
-                summary = summary[:400] + card["parameters_more"]
-            details.append(card["parameters"].format(summary=summary))
+        for key, label in wording["parameter_labels"].items():
+            if key not in payload or payload[key] is None:
+                continue
+            value = payload[key]
+            if key == "command" and isinstance(value, list) and all(isinstance(arg, str) for arg in value):
+                value = shlex.join(value)
+            elif not isinstance(value, (str, int, float)):
+                continue
+            value = str(value).replace("\n", "\\n").replace("\r", "\\r")
+            if action != "project.bind" and len(value) > 220:
+                value = value[:220] + card["parameters_more"]
+            details.append(f"{label}: {value}")
         result["question"] = "\n".join([
-            card["question"].format(action=wording["questions"][action], subject=subject),
+            question,
             *details, card["consequences"].format(details=wording["consequences"][action]),
-            card["hash"].format(hash=result["hash"]),
+            card["hash"].format(hash=result["hash"][:8]),
         ])
-        result["buttons"] = wording["buttons"]
+        result["buttons"] = buttons
         return result
 
     def confirmation_describe(self, action, target, payload=None):
@@ -121,7 +141,13 @@ class Confirmations:
     def confirmation_chat(self, action, target, intent_hash, message_ref, answer, asked, ttl=300):
         self.need_actor("lead", "installer")
         require(isinstance(message_ref, str) and 0 < len(message_ref.strip()) <= 512, "User message reference required")
-        require(isinstance(answer, str) and answer.strip().casefold() in bundle.texts(self.root)["chat_answers"],
+        wording = bundle.texts(self.root)
+        answers = wording["chat_answers"]
+        if action == "install":
+            plan = self.store.get("confirmation_plan", intent_hash, {})
+            if plan.get("payload", {}).get("mode") == "autonomous":
+                answers = [*answers, wording["install_cards"]["autonomous"]["buttons"]["yes"].casefold()]
+        require(isinstance(answer, str) and answer.strip().casefold() in answers,
                 "Explicit affirmative answer required")
         audit = {"message_ref": message_ref, "asked": asked, "answer": answer}
         return self._issue_grant(action, target, intent_hash, ttl, chat=audit)

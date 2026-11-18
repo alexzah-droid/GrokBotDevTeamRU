@@ -39,7 +39,8 @@ def snapshot(repository):
     probe = run(["git", "rev-parse", "--show-toplevel"], root)
     require(probe["returncode"] == 0 and Path(probe["stdout"].strip()).resolve() == root,
             "Project must be the root of a Git repository")
-    untracked = subprocess.run(["git", "ls-files", "--others", "--exclude-standard", "-z"], cwd=str(root),
+    untracked = subprocess.run(["git", "ls-files", "--others", "--exclude-standard",
+                                "--exclude=__pycache__/", "--exclude=*.pyc", "--exclude=.pytest_cache/", "-z"], cwd=str(root),
                                capture_output=True, check=True).stdout
     require(not untracked, "Untracked project files: stage source files or explicitly ignore generated output")
     result = subprocess.run(["git", "ls-files", "-z", "--cached"], cwd=str(root), capture_output=True, check=True)

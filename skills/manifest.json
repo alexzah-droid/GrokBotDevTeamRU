@@ -1,12 +1,12 @@
 {
-  "version": "1.5.1",
+  "version": "1.5.2",
   "delivery": "file-backed",
   "skills": [
-    {"name":"team-workflow","roles":["lead","developer","reviewer"],"version":"1.5.1","dependencies":[]},
-    {"name":"team-engineering","roles":["developer"],"version":"1.5.1","dependencies":["project-verification","technical-writing"]},
-    {"name":"project-verification","roles":["developer","reviewer"],"version":"1.5.1","dependencies":[]},
-    {"name":"technical-writing","roles":["lead","developer","reviewer"],"version":"1.5.1","dependencies":[]},
-    {"name":"team-review","roles":["reviewer"],"version":"1.5.1","dependencies":["project-verification","technical-writing"]},
-    {"name":"team-improvement","roles":["lead","developer","reviewer"],"version":"1.5.1","dependencies":[]}
+    {"name":"team-workflow","roles":["lead","developer","reviewer"],"version":"1.5.2","dependencies":[]},
+    {"name":"team-engineering","roles":["developer"],"version":"1.5.2","dependencies":["project-verification","technical-writing"]},
+    {"name":"project-verification","roles":["developer","reviewer"],"version":"1.5.2","dependencies":[]},
+    {"name":"technical-writing","roles":["lead","developer","reviewer"],"version":"1.5.2","dependencies":[]},
+    {"name":"team-review","roles":["reviewer"],"version":"1.5.2","dependencies":["project-verification","technical-writing"]},
+    {"name":"team-improvement","roles":["lead","developer","reviewer"],"version":"1.5.2","dependencies":[]}
   ]
 }

@@ -39,7 +39,11 @@ class RuntimeCase(unittest.TestCase):
         (root / ".gitignore").write_text("__pycache__/\n")
         subprocess.run(["git", "init", "-q", str(root)], check=True)
         subprocess.run(["git", "add", "."], cwd=str(root), check=True)
-        self.as_role("lead").project_bind(str(root), [sys.executable, "-B", "verify.py"], "user:project")
+        e = self.as_role("lead")
+        payload = {"repository": str(root), "command": [sys.executable, "-B", "verify.py"], "evidence": "user:project"}
+        grant(e, "project.bind", "project", payload)
+        e.project_bind(**payload)
+        e.confirmation_code = None
         return root
 
     def task(self, auto=False):
