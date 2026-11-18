@@ -106,6 +106,31 @@ class ChatConfirmationTests(RuntimeCase):
         self.assertIn(CARD["consequences"].format(details=WORDING["consequences"]["policy.set"]),
                       self.plan()["question"].splitlines())
 
+    def test_task_cards_quote_and_shorten_the_goal(self):
+        self.project()
+        e = self.as_role("lead")
+        language = metadata(ROOT)["language"]
+        inner = {'ru': "Проверить ‹lcm› и 'gcd' ", 'en': "Check 'lcm' and 'gcd' "}[language]
+        quoted = {'ru': 'Проверить «lcm» и "gcd"', 'en': 'Check "lcm" and "gcd"'}[language]
+        prefix = {'ru': "для задачи «", 'en': 'for task "'}[language]
+        closing = {'ru': "»", 'en': '"'}[language]
+        for suffix in ("", "x" * 90):
+            goal = quoted + ("\n" + suffix if suffix else "")
+            request = {"goal": goal, "request_id": "task:" + suffix, "user_ref": "chat:request",
+                       "criteria": [{"id": "c1", "text": "Result verified"}]}
+            task = e.task_create(request)
+            displayed_goal = inner.rstrip()
+            if suffix:
+                displayed_goal = inner + "x" * (79 - len(inner)) + "…"
+            for action in ("task.accept", "task.cancel", "task.block", "task.create", "task.auto_accept"):
+                with self.subTest(action=action, long=bool(suffix)):
+                    plan = e.confirmation_describe(action, task["id"], request if action in {
+                        "task.create", "task.auto_accept"} else {})
+                    self.assertTrue(plan["question"].splitlines()[0].endswith(
+                        f"{prefix}{displayed_goal}{closing} ({task['id']})?"), plan["question"])
+                    self.assertLessEqual(len(displayed_goal), 80)
+                    self.assertNotIn(f"\n{WORDING['parameter_labels']['goal']}:", plan["question"])
+
     def test_long_diff_preview_has_forty_lines_and_links_to_full_diff(self):
         exp = self.propose(extra="\n".join(f"marker-{n:02}" for n in range(80)))
         plan = self.engine.confirmation_describe("improve.approve", exp["id"])

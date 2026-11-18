@@ -4,10 +4,10 @@
 
 ## 1. Подготовь среду
 
-Возьми `v1.5.2` из https://github.com/alexzah-droid/GrokBotDevTeamRU. Выбери отдельные постоянные абсолютные пути `<release>`, `<venv>`, `<runtime>` и Python 3.10+ (`<python>`).
+Возьми `v1.5.3` из https://github.com/alexzah-droid/GrokBotDevTeamRU. Выбери отдельные постоянные абсолютные пути `<release>`, `<venv>`, `<runtime>` и Python 3.10+ (`<python>`).
 
 ```text
-git clone --depth 1 --branch v1.5.2 https://github.com/alexzah-droid/GrokBotDevTeamRU.git <release>
+git clone --depth 1 --branch v1.5.3 https://github.com/alexzah-droid/GrokBotDevTeamRU.git <release>
 <python> -m venv <venv>
 <venv>/bin/python -B <release>/scripts/doctor.py
 <venv>/bin/python -B <release>/scripts/release.py check
@@ -32,7 +32,7 @@ git clone --depth 1 --branch v1.5.2 https://github.com/alexzah-droid/GrokBotDevT
 
 От `--actor installer` без `--mock` читай `bridge pending`. Для `pending`: `bridge begin <op>`, нативный вызов, `bridge ack <op> --file receipt.json`. Для `dispatched` сверяй историю, без подтверждения не дублируй.
 
-- **`create`.** Передай `CreateAgent` имя `data.name` и сохранённый `section_id`, если поле поддержано. При явном отказе без создания повтори без папки. Запиши фактические `agent_id`, `external_ref`, `section_id` (или `null` без папки). Совпадение имени ничего не подтверждает.
+- **`create`.** Передай `CreateAgent` поля `name`, `description` и `section_id` из `data` дословно. Пропусти папку, если поле не поддержано или вызов явно отклонён без создания. Запиши фактические `agent_id`, `external_ref`, `section_id` (или `null`). Совпадение имени ничего не подтверждает. После `bridge ack` сразу выполни `bind` этого бота, до создания второго.
 - **`bind`.** Сохрани `data.bootstrap` в памяти нужного бота. Он читает правило и навыки, запускает `--actor <role> role probe <role>`. Проверь сохранение нативно и по возможности повторным запросом. Добавь `"persistent":true` и `external_ref` к проверенной пробе.
 - **`smoke`.** Разработчик, затем Проверяющий выполняют `--actor <role> role smoke <role>`. Добавь `external_ref` передачи. Если у `SendToAgent` или `UpdateMemory` нет ID, запиши описательную ссылку `agent-message:<id>:<step>:<time>` или `native-memory:profile:<id>:<step>:<time>` по [формату](docs/FORMATS.md). Она фиксирует наблюдение, а не доставку.
 

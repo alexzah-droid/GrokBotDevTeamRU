@@ -41,7 +41,7 @@ class Installation:
         release = bundle.verify(self.root)
         if source is None:
             source = release["repository"]
-        role_names = bundle.texts(self.root)["roles"]
+        wording = bundle.texts(self.root)
         with self.store.transaction():
             old = self.store.get("config", "team")
             draft = self.store.get("config", "install_choice")
@@ -71,7 +71,10 @@ class Installation:
                          "bound": False, "skills_hash": bundle.skills_hash(role, self.root)}
                 self.store.put("role", role, value)
                 if role != "lead":
-                    data = {"name": role_names[role] + " · " + team_id[-6:], "team_id": team_id}
+                    role_name = wording["roles"][role]
+                    data = {"name": role_name + " · " + team_id[-6:], "team_id": team_id,
+                            "description": wording["create_description"].format(
+                                role=role_name, team_id=team_id, lead_id=lead_id)}
                     if section_id is not None:
                         data["section_id"] = section_id
                     self._operation("create", role, data, key="install-create-" + role)

@@ -65,6 +65,32 @@ class InstallationChoicesTests(unittest.TestCase):
         e.bridge_ack(action["id"], {"agent_id": "agent", "external_ref": "create:agent", "section_id": None})
         self.assertIsNone(e.store.need("role", action["target"])["section_id"])
 
+    def test_create_descriptions_localize_the_wait_for_setup_and_survive_resume(self):
+        e = self.engine
+        lead_id = "lead-for-setup"
+        team = e.install(lead_id)
+        wording = bundle.texts(ROOT)
+        waiting = {
+            "en": "waiting for a setup message from the Lead",
+            "ru": "ждёшь сообщения настройки от Руководителя",
+        }[team["release"]["language"]]
+        creates = [op for op in e.pending() if op["kind"] == "create"]
+        self.assertEqual({op["target"] for op in creates}, {"developer", "reviewer"})
+        for op in creates:
+            with self.subTest(role=op["target"]):
+                description = op["data"]["description"]
+                for fragment in (wording["roles"][op["target"]], team["id"], lead_id, waiting):
+                    self.assertIn(fragment, description)
+                self.assertNotIn("argv", description)
+                self.assertNotIn(str(e.store.root), description)
+        e.install(lead_id)
+        self.assertEqual([op for op in e.pending() if op["kind"] == "create"], creates)
+        e.bridge_begin("install-create-developer")
+        e.bridge_ack("install-create-developer", {"agent_id": "dev", "external_ref": "create:dev"})
+        queued = {op["id"]: op for op in e.pending()}
+        self.assertEqual(queued["install-bind-developer"]["data"]["agent_id"], "dev")
+        self.assertEqual(queued["install-create-reviewer"]["status"], "pending")
+
     def test_cli_records_choice_and_section(self):
         e = self.engine
         base = [sys.executable, "-B", str(ROOT / "teamctl.py"), "--workspace", str(e.store.root), "--actor", "installer"]

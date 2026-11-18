@@ -25,6 +25,7 @@ class Confirmations:
         require(isinstance(payload, dict), "Confirmation payload must be an object")
         state = {}
         diff = None
+        task_goal = None
         if action == "policy.channel":
             require(target == "system" and payload == {"channel": "chat"}, "Invalid channel confirmation")
             state = self.policy()
@@ -49,20 +50,20 @@ class Confirmations:
         elif action == "instruction.restore":
             state = {"current": self.store.need("role", target)["current"],
                      "version": self.store.version_get(payload.get("version", ""))["hash"]}
-        elif action == "task.auto_accept":
+        elif action in ("task.auto_accept", "task.create"):
             state = {"project": self.store.need("config", "project")["id"]}
+            task_goal = payload.get("goal")
         elif action in ("task.accept", "task.block", "task.cancel"):
             task = self.store.need("task", target)
             state = {"revision": task["revision"], "request_hash": task["request_hash"],
                      "review": task.get("review"), "demo": task.get("demo")}
+            task_goal = task["request"]["goal"]
         elif action == "project.bind":
             require(target == "project", "Invalid project confirmation target")
             payload = self.project_binding_payload(**payload)
             state = self.store.get("config", "project", {})
         elif action in ("service.start", "service.stop", "install"):
             state = {"team_id": self.store.get("config", "team", {}).get("id")}
-        elif action == "task.create":
-            state = {"project": self.store.need("config", "project")["id"]}
         else:
             require(False, "Unknown confirmation action: " + action)
         policy = self.store.get("config", "policy", {})
@@ -73,14 +74,16 @@ class Confirmations:
                   "diff_hash": state.get("diff_hash"), "context": context}
         if diff is not None:
             result["diff"] = diff
+        wording = bundle.texts(self.root)
+        card = wording["card"]
         subject = target
         if action.startswith("improve."):
             subject = f'{target} ({exp["role"]})'
-        elif action in ("task.accept", "task.block", "task.cancel"):
-            goal = task["request"]["goal"].strip().splitlines()[0][:120]
-            subject = f"{goal} ({target})"
-        wording = bundle.texts(self.root)
-        card = wording["card"]
+        elif isinstance(task_goal, str) and task_goal.strip():
+            goal = " ".join(task_goal.split()).translate(str.maketrans({'"': "'", "«": "‹", "»": "›"}))
+            if len(goal) > 80:
+                goal = goal[:79].rstrip() + "…"
+            subject = card["task_subject"].format(goal=goal, target=target)
         details = []
         question = card["question"].format(action=wording["questions"][action], subject=subject)
         buttons = wording["buttons"]
@@ -109,6 +112,8 @@ class Confirmations:
             details.append(card["observations"].format(successes=state["successes"], version=exp["candidate"]))
         for key, label in wording["parameter_labels"].items():
             if key not in payload or payload[key] is None:
+                continue
+            if key == "goal" and task_goal is not None:
                 continue
             value = payload[key]
             if key == "command" and isinstance(value, list) and all(isinstance(arg, str) for arg in value):
