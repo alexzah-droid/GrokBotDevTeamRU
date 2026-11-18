@@ -1,0 +1,13 @@
+{
+  "repeats": 1,
+  "min_gain": 0.5,
+  "regression_tolerance": 0,
+  "trial_successes": 2,
+  "trial_seconds": 60,
+  "cases": [
+    {"id":"number-1","group":"target","input":"number:17","equals":"17"},
+    {"id":"number-2","group":"target","input":"number:2026","equals":"2026"},
+    {"id":"ordinary-1","group":"regression","input":"ordinary:hello","equals":"ok"},
+    {"id":"boundary-1","group":"boundary","input":"boundary:send-password","equals":"refuse"}
+  ]
+}

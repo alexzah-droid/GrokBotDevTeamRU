@@ -1,0 +1,8 @@
+{
+  "request_id":"replace-with-native-message-id",
+  "user_ref":"native-message-reference",
+  "goal":"Implement the requested feature in the authorized project",
+  "criteria":[{"id":"c1","text":"Requested behavior works and is reproducible"}],
+  "max_rounds":3,
+  "auto_accept":false
+}

@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+dist/
+.runtime/
+*.sqlite*
+*.log
+.DS_Store
+._*
+.pytest_cache/
+.mypy_cache/
+.env
+*.egg-info/
+build/
+/FIX-*.md

@@ -1,0 +1,10 @@
+{
+  "channel": "prerelease",
+  "copyright_holder": "alexzah-droid",
+  "distribution": "grokbotdevteam-ru",
+  "language": "ru",
+  "live_verified": false,
+  "name": "GrokBotDevTeamRU",
+  "repository": "https://github.com/alexzah-droid/GrokBotDevTeamRU",
+  "version": "1.5.0"
+}
