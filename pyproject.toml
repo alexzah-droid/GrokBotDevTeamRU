@@ -5,7 +5,7 @@ backend-path = ["."]
 
 [project]
 name = "grokbotdevteam-ru"
-version = "1.5.0"
+version = "1.5.1"
 description = "Three-role bot team, resumable installation and reversible instruction improvement"
 requires-python = ">=3.10"
 dependencies = []

@@ -23,7 +23,7 @@ def _metadata():
         "METADATA": (f"Metadata-Version: 2.1\nName: {name}\nVersion: {version}\n"
                      "Summary: Three-role development team, pilot prerelease\n"
                      "Requires-Python: >=3.10\nLicense: MIT\nAuthor: alexzah-droid\n\n"
-                     "Unofficial project; not affiliated with xAI. Live installation is unverified.\n").encode(),
+                     "Unofficial project; not affiliated with xAI.\n").encode(),
         "WHEEL": b"Wheel-Version: 1.0\nGenerator: grokteam-stdlib-backend\nRoot-Is-Purelib: true\nTag: py3-none-any\n",
         "entry_points.txt": b"[console_scripts]\ngrok-team = grokteam.cli:main\n",
         "licenses/LICENSE": (ROOT / "LICENSE").read_bytes(),

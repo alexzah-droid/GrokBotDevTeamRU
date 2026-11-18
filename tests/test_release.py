@@ -10,6 +10,7 @@ import unittest
 from urllib.parse import unquote
 
 from grokteam import bundle
+from grokteam.build_backend import _metadata
 from grokteam.release import metadata
 from grokteam.store import TeamError
 
@@ -82,6 +83,24 @@ class ReleaseTests(unittest.TestCase):
                 self.assertEqual(ru.splitlines()[2], f"[English]({basename}.md) · **Русский**")
                 levels = re.compile(r"^(#{1,2}) +", re.M)
                 self.assertEqual(levels.findall(en), levels.findall(ru))
+
+    def test_current_release_descriptions_omit_installation_status_caveats(self):
+        caveats = re.compile(
+            r"жив(?:ая|ой)\s+установ|live\s+install|not\s+verified|unverifi(?:ed)"
+            r"|не\s+проверена|предстоит\s+(?:подтвердить|проверить)"
+            r"|still\s+needs\s+to\s+(?:verify|confirm)|live_verified",
+            re.IGNORECASE,
+        )
+        descriptions = [*ROOT.glob("README*.md"), *ROOT.glob("SECURITY*.md"),
+                        *ROOT.glob("VALIDATION.md"), *ROOT.glob("INSTALL.md"),
+                        *ROOT.glob("install-prompt.txt"), *(ROOT / "docs").glob("*.md")]
+        for path in descriptions:
+            with self.subTest(page=path.relative_to(ROOT)):
+                content = path.read_text(encoding="utf-8")
+                self.assertNotRegex(content, caveats)
+                if path.name.startswith("README"):
+                    self.assertNotRegex(content, r"(?m)^\*\*(?:Status|Статус):\*\*")
+        self.assertNotRegex(_metadata()[1]["METADATA"].decode("utf-8"), caveats)
 
     def test_local_maintenance_markdown_is_excluded_from_release(self):
         with tempfile.TemporaryDirectory() as tmp:

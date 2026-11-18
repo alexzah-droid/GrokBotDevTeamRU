@@ -4,10 +4,10 @@
 
 ## 1. Подготовь среду
 
-Возьми предварительный выпуск `v1.5.0` из https://github.com/alexzah-droid/GrokBotDevTeamRU. Если тега нет, сообщи блокер и остановись. `<release>`, `<venv>`, `<runtime>` — отдельные постоянные абсолютные пути. Для venv выбери доступный Python 3.10+ (`<python>`). Подставляй аргументы как argv с точными путями.
+Возьми предварительный выпуск `v1.5.1` из https://github.com/alexzah-droid/GrokBotDevTeamRU. Если тега нет, сообщи блокер и остановись. `<release>`, `<venv>`, `<runtime>` — отдельные постоянные абсолютные пути. Для venv выбери доступный Python 3.10+ (`<python>`). Подставляй аргументы как argv с точными путями.
 
 ```text
-git clone --depth 1 --branch v1.5.0 https://github.com/alexzah-droid/GrokBotDevTeamRU.git <release>
+git clone --depth 1 --branch v1.5.1 https://github.com/alexzah-droid/GrokBotDevTeamRU.git <release>
 <python> -m venv <venv>
 <venv>/bin/python -B <release>/scripts/doctor.py
 <venv>/bin/python -B <release>/scripts/release.py check
@@ -26,7 +26,7 @@ git clone --depth 1 --branch v1.5.0 https://github.com/alexzah-droid/GrokBotDevT
 
 ## 3. Выполни очередь
 
-Работай от `--actor installer` без `--mock` в живой установке. Читай `bridge pending`. Для `pending` выполни `bridge begin <op>`, затем вызови нативный инструмент и запиши `bridge ack <op> --file receipt.json`. Для `dispatched` найди фактический результат в истории, при неоднозначности остановись. После каждого подтверждения снова читай очередь.
+Работай от `--actor installer` без `--mock` при нативной установке. Читай `bridge pending`. Для `pending` выполни `bridge begin <op>`, затем вызови нативный инструмент и запиши `bridge ack <op> --file receipt.json`. Для `dispatched` найди фактический результат в истории, при неоднозначности остановись. После каждого подтверждения снова читай очередь.
 
 - **`create`.** Создай бота с `data.name`. Совпадение имён чужих ботов не подтверждает принадлежность к команде. В подтверждение запиши фактические `agent_id` и `external_ref` вызова или результата.
 - **`bind`.** Сохрани `data.bootstrap` в постоянной памяти своей роли или отправь его назначенному боту для сохранения. Не стирай прежнюю память. В контексте этой роли выполни argv из стартового правила, прочти prompt и навыки по указанным путям, затем выполни `--actor <role> role probe <role>`. Проверь сохранение платформенным инструментом и, если возможно, повторным обращением. В подтверждение добавь к JSON пробы фактический `external_ref` и `"persistent":true` только после проверки.
