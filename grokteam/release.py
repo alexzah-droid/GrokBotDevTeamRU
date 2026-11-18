@@ -17,13 +17,22 @@ def ignored(relative):
             or relative.suffix in (".pyc", ".pyo"))
 
 
+def validate_channel(data, source):
+    channel = data.get("channel")
+    verified = data.get("live_verified")
+    if (channel == "prerelease" and verified is False) or (channel == "stable" and verified is True):
+        return
+    raise ValueError(
+        f"{source}: expected channel=prerelease with live_verified=false or channel=stable with live_verified=true"
+    )
+
+
 def metadata(root):
     root = Path(root)
     data = json.loads((root / "release.json").read_text())
     if data.get("version") != (root / "VERSION").read_text().strip():
         raise ValueError("release.json version differs from VERSION")
-    if data.get("channel") != "prerelease" or data.get("live_verified") is not False:
-        raise ValueError("Pilot package requires channel=prerelease and live_verified=false")
+    validate_channel(data, "release.json")
     if not re.fullmatch(r"[A-Za-z0-9]+", data.get("name", "")) or data.get("language") not in ("ru", "en"):
         raise ValueError("Invalid release name or language")
     if not data.get("repository", "").endswith("/" + data["name"]) or not re.fullmatch(
@@ -52,15 +61,17 @@ def source_files(root):
 
 def render(root):
     data = metadata(root)
-    return {**{key: data[key] for key in RELEASE_FIELDS}, "files": source_files(root)}
+    manifest = {key: data[key] for key in RELEASE_FIELDS}
+    if "validation" in data:
+        manifest["validation"] = data["validation"]
+    return {**manifest, "files": source_files(root)}
 
 
 def check(root):
     root = Path(root)
     expected = json.loads((root / "MANIFEST.json").read_text())
+    validate_channel(expected, "MANIFEST.json")
     actual = render(root)
-    if expected.get("live_verified") is not False or expected.get("channel") != "prerelease":
-        raise ValueError("Manifest must explicitly contain live_verified=false and channel=prerelease")
     if actual != expected:
         a, b = actual["files"], expected["files"]
         raise ValueError("Manifest mismatch: missing=%r extra=%r changed=%r" % (

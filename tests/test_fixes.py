@@ -230,14 +230,40 @@ class ReleaseFixTests(unittest.TestCase):
             (root/".runtime").mkdir()
             with self.assertRaisesRegex(ValueError,"Runtime directory forbidden"): check(root)
 
-    def test_live_flag_is_mandatory_false(self):
+    def test_release_metadata_channel_combinations(self):
+        from grokteam.release import check, render
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.copy_release(tmp)
+            metadata_path = root / "release.json"
+            data = json.loads(metadata_path.read_text())
+            cases = (("prerelease", False, True), ("prerelease", True, False),
+                     ("stable", False, False), ("stable", True, True),
+                     ("other", False, False), ("stable", 1, False), ("prerelease", 0, False),
+                     ("stable", None, False))
+            for channel, verified, valid in cases:
+                with self.subTest(channel=channel, live_verified=verified):
+                    metadata_path.write_text(json.dumps({**data, "channel": channel, "live_verified": verified}))
+                    if valid:
+                        manifest = render(root)
+                        (root / "MANIFEST.json").write_text(json.dumps(manifest))
+                        self.assertEqual(check(root), manifest)
+                        self.assertEqual(manifest.get("validation"), data.get("validation"))
+                    else:
+                        with self.assertRaisesRegex(ValueError, r"release\.json: expected channel="):
+                            render(root)
+
+    def test_manifest_rejects_invalid_channel_combinations(self):
         from grokteam.release import check
         with tempfile.TemporaryDirectory() as tmp:
-            root=self.copy_release(tmp)
-            manifest=json.loads((root/"MANIFEST.json").read_text())
-            manifest["live_verified"]=True
-            (root/"MANIFEST.json").write_text(json.dumps(manifest))
-            with self.assertRaisesRegex(ValueError,"live_verified=false"): check(root)
+            root = self.copy_release(tmp)
+            manifest_path = root / "MANIFEST.json"
+            manifest = json.loads(manifest_path.read_text())
+            for channel, verified in (("prerelease", True), ("stable", False),
+                                      ("other", True), ("stable", 1), ("prerelease", 0)):
+                with self.subTest(channel=channel, live_verified=verified):
+                    manifest_path.write_text(json.dumps({**manifest, "channel": channel, "live_verified": verified}))
+                    with self.assertRaisesRegex(ValueError, r"MANIFEST\.json: expected channel="):
+                        check(root)
 
     def test_os_caches_ignored_but_actual_extra_file_named(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reproducible prerelease archives. Run from any directory."""
+"""Reproducible release archives. Run from any directory."""
 import argparse
 import gzip
 import hashlib

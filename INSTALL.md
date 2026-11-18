@@ -4,10 +4,10 @@
 
 ## 1. Подготовь среду
 
-Возьми `v1.5.3` из https://github.com/alexzah-droid/GrokBotDevTeamRU. Выбери отдельные постоянные абсолютные пути `<release>`, `<venv>`, `<runtime>` и Python 3.10+ (`<python>`).
+Возьми `v1.6.0` из https://github.com/alexzah-droid/GrokBotDevTeamRU. На странице GitHub выбери стабильный выпуск с отметкой `Latest`. Выбери отдельные постоянные абсолютные пути `<release>`, `<venv>`, `<runtime>` и Python 3.10+ (`<python>`).
 
 ```text
-git clone --depth 1 --branch v1.5.3 https://github.com/alexzah-droid/GrokBotDevTeamRU.git <release>
+git clone --depth 1 --branch v1.6.0 https://github.com/alexzah-droid/GrokBotDevTeamRU.git <release>
 <python> -m venv <venv>
 <venv>/bin/python -B <release>/scripts/doctor.py
 <venv>/bin/python -B <release>/scripts/release.py check

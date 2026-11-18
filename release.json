@@ -1,10 +1,11 @@
 {
-  "channel": "prerelease",
+  "channel": "stable",
   "copyright_holder": "alexzah-droid",
   "distribution": "grokbotdevteam-ru",
   "language": "ru",
-  "live_verified": false,
+  "live_verified": true,
   "name": "GrokBotDevTeamRU",
   "repository": "https://github.com/alexzah-droid/GrokBotDevTeamRU",
-  "version": "1.5.3"
+  "validation": "VALIDATION.md",
+  "version": "1.6.0"
 }

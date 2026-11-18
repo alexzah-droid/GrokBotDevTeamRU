@@ -29,8 +29,9 @@ class PackageTests(unittest.TestCase):
             cli=environment/"bin/grok-team"
             result=json.loads(command([str(cli),"--workspace",str(root/"state"),"--actor","installer", "install","--mock","--lead-id","pip-primary"]))
             self.assertEqual(result["status"],"ready")
-            self.assertFalse(result["release"]["live_verified"])
             release = json.loads((ROOT / "release.json").read_text())
+            self.assertEqual(result["release"]["channel"], release["channel"])
+            self.assertIs(result["release"]["live_verified"], release["live_verified"])
             self.assertEqual(result["release"]["name"], release["name"])
             self.assertEqual(result["release"]["language"], release["language"])
             self.assertEqual(result["source"], release["repository"])

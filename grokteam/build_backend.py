@@ -21,7 +21,7 @@ def _metadata():
     info = f"{name.replace('-', '_')}-{version}.dist-info"
     return info, {
         "METADATA": (f"Metadata-Version: 2.1\nName: {name}\nVersion: {version}\n"
-                     "Summary: Three-role development team, pilot prerelease\n"
+                     "Summary: Three-role development team\n"
                      "Requires-Python: >=3.10\nLicense: MIT\nAuthor: alexzah-droid\n\n"
                      "Unofficial project; not affiliated with xAI.\n").encode(),
         "WHEEL": b"Wheel-Version: 1.0\nGenerator: grokteam-stdlib-backend\nRoot-Is-Purelib: true\nTag: py3-none-any\n",
